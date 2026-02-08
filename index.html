@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet.photon.css">
+        
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+        <link rel="stylesheet" href="https://ppete2.github.io/Leaflet.PolylineMeasure/Leaflet.PolylineMeasure.css" />
+
+        <style>
+            :root { --side-width: 340px; --primary: #1b262c; --accent: #27ae60; --gold: #f1c40f; --light: #f4f7f6; }
+            html, body { height: 100%; margin: 0; overflow: hidden; font-family: 'Poppins', sans-serif; }
+            
+            /* Header Style National */
+            .top-nav { height: 65px; background: var(--primary); color: white; display: flex; align-items: center; padding: 0 25px; justify-content: space-between; z-index: 3000; border-bottom: 3px solid var(--accent); }
+            .flag { width: 38px; border-radius: 4px; margin-right: 15px; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+
+            .app-body { display: flex; height: calc(100vh - 65px); width: 100vw; background: #eef2f3; }
+
+            /* Sidebars */
+            .sidebar { width: var(--side-width); background: white; display: flex; flex-direction: column; z-index: 2000; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
+            .sidebar-left { border-right: 1px solid #dcdde1; }
+            .sidebar-right { border-left: 1px solid #dcdde1; }
+
+            .nav-tabs { background: #f8f9fa; border: none; }
+            .nav-link { border: none !important; color: #7f8c8d; font-weight: 700; font-size: 0.7rem; padding: 18px 5px; text-transform: uppercase; letter-spacing: 1px; }
+            .nav-link.active { color: var(--accent) !important; background: white !important; border-bottom: 4px solid var(--accent) !important; }
+
+            .tab-body { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: thin; }
+
+            /* Map Area */
+            #map-container { flex: 1; position: relative; }
+            #map { width: 100%; height: 100%; }
+
+            /* Widgets de Statistiques */
+            .stat-group-title { font-size: 0.8rem; font-weight: bold; color: var(--primary); margin: 15px 0 10px 0; display: flex; align-items: center; }
+            .stat-group-title i { margin-right: 8px; color: var(--accent); }
+            
+            .indicator-card { background: #fdfdfd; border: 1px solid #eaeaea; border-radius: 10px; padding: 12px; margin-bottom: 12px; transition: 0.3s; }
+            .indicator-card:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 4px 8px rgba(0,0,0,0.05); }
+            .ind-label { font-size: 0.75rem; color: #636e72; display: block; margin-bottom: 4px; }
+            .ind-val { font-size: 1.2rem; font-weight: 800; color: var(--primary); }
+            .ind-unit { font-size: 0.7rem; color: var(--accent); margin-left: 4px; }
+
+            /* Formulaires & Couches */
+            .layer-box { border: 1px solid #f1f2f6; border-radius: 8px; padding: 10px; margin-bottom: 8px; display: flex; align-items: center; background: #fcfcfc; }
+            .layer-box input { width: 20px; height: 20px; margin-right: 15px; accent-color: var(--accent); cursor: pointer; }
+            .layer-box label { font-size: 0.85rem; font-weight: 600; color: #2f3640; cursor: pointer; margin-bottom: 0; }
+
+            .gps-float { position: absolute; bottom: 25px; right: 25px; z-index: 1000; background: var(--accent); color: white; width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4); border: none; cursor: pointer; }
+        </style>
+        <title>OBSERVATOIRE SIG KOLDA</title>
+    </head>
+    <body>
+
+        <header class="top-nav">
+            <div class="d-flex align-items-center">
+                <img src="https://flagcdn.com/w80/sn.png" class="flag" alt="Sénégal">
+                <div>
+                    <h5 class="mb-0 fw-bold">RÉGION DE <span style="color:var(--gold)">KOLDA</span></h5>
+                    <small class="opacity-75" style="font-size: 0.65rem; letter-spacing: 1px;">SYSTÈME D'INFORMATION GÉOGRAPHIQUE PROFESSIONNEL</small>
+                </div>
+            </div>
+            <div class="d-none d-lg-block">
+                <span class="badge bg-light text-dark py-2 px-3"><i class="fas fa-calendar-alt me-2"></i>Données 2026</span>
+            </div>
+        </header>
+
+        <div class="app-body">
+            <aside class="sidebar sidebar-left">
+                <ul class="nav nav-tabs nav-fill" role="tablist">
+                    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#home"><i class="fas fa-home fa-lg d-block mb-1"></i> Accueil</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tools"><i class="fas fa-ruler-combined fa-lg d-block mb-1"></i> Mesures</a></li>
+                </ul>
+                <div class="tab-content tab-body">
+                    <div class="tab-pane fade show active" id="home">
+                        <h6 class="fw-bold border-bottom pb-2 mb-3">Mission du Portail</h6>
+                        <p class="small text-secondary" style="line-height: 1.6;">
+                            Cet outil web/SIG est le pilier de la surveillance territoriale pour la région de Kolda (Haute-Casamance). Il centralise les données spatiales pour optimiser :
+                        </p>
+                        <div class="p-3 bg-light rounded-3 mb-3">
+                            <ul class="small mb-0 list-unstyled">
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>L'accès aux services sociaux de base.</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>La planification des infrastructures.</li>
+                                <li><i class="fas fa-check text-success me-2"></i>La gestion des ressources naturelles.</li>
+                            </ul>
+                        </div>
+                        <img src="https://img.freepik.com/free-vector/senegal-map-with-administrative-divisions_1284-42861.jpg" class="img-fluid rounded border mb-3" alt="Carte Kolda">
+                    </div>
+                    
+                    <div class="tab-pane fade" id="tools">
+                        <h6 class="fw-bold mb-3">Outils Topographiques</h6>
+                        <div class="alert alert-info py-2" style="font-size: 0.75rem;">
+                            <i class="fas fa-info-circle me-2"></i>Cliquez sur la règle (haut-gauche de la carte) pour démarrer.
+                        </div>
+                        <div class="indicator-card">
+                            <i class="fas fa-arrows-alt-h text-primary"></i> <b>Distances :</b> Calculer le linéaire entre deux localités.
+                        </div>
+                        <div class="indicator-card">
+                            <i class="fas fa-vector-square text-warning"></i> <b>Surfaces :</b> Délimiter une parcelle pour obtenir sa superficie.
+                        </div>
+                        <div class="indicator-card">
+                            <i class="fas fa-map-pin text-danger"></i> <b>Coordonnées :</b> Double-cliquez pour extraire les données GPS.
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <main id="map-container">
+                <div id="map"></div>
+                <button class="gps-float" onclick="geoLoc()"><i class="fas fa-street-view fa-lg"></i></button>
+            </main>
+
+            <aside class="sidebar sidebar-right">
+                <ul class="nav nav-tabs nav-fill" role="tablist">
+                    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#layers-tab"><i class="fas fa-layer-group fa-lg d-block mb-1"></i> Couches</a></li>
+                    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#stats-tab"><i class="fas fa-chart-line fa-lg d-block mb-1"></i> Statistiques</a></li>
+                </ul>
+                <div class="tab-content tab-body">
+                    <div class="tab-pane fade show active" id="layers-tab">
+                        <span class="stat-group-title"><i class="fas fa-map"></i> Fond de Plan</span>
+                        <select class="form-select form-select-sm mb-4" onchange="upBase(this.value)">
+                            <option value="osm">OpenStreetMap Classique</option>
+                            <option value="sat">Google Satellite (Hybride)</option>
+                            <option value="ter">Carte Physique (Relief)</option>
+                        </select>
+
+                        <span class="stat-group-title"><i class="fas fa-database"></i> Données SIG Kolda</span>
+                        <div class="layer-box"><input type="checkbox" id="l-reg" checked onchange="upL('reg')"><label for="l-reg">Région (Kolda)</label></div>
+                        <div class="layer-box"><input type="checkbox" id="l-dep" checked onchange="upL('dep')"><label for="l-dep">Départements</label></div>
+                        <div class="layer-box"><input type="checkbox" id="l-loc" checked onchange="upL('loc')"><label for="l-loc">Localités & Villages</label></div>
+                        <div class="layer-box"><input type="checkbox" id="l-rou" checked onchange="upL('rou')"><label for="l-rou">Réseau Routier</label></div>
+                        <div class="layer-box"><input type="checkbox" id="l-hyd" checked onchange="upL('hyd')"><label for="l-hyd">Hydrographie (Fleuves)</label></div>
+                        <div class="layer-box"><input type="checkbox" id="l-eco" checked onchange="upL('eco')"><label for="l-eco">Carte Scolaire (Écoles)</label></div>
+                    </div>
+
+                    <div class="tab-pane fade" id="stats-tab">
+                        <div class="stat-group-title"><i class="fas fa-users"></i> Démographie & Social</div>
+                        <div class="indicator-card">
+                            <span class="ind-label">Population Régionale (Est.)</span>
+                            <span class="ind-val">850 000</span><span class="ind-unit">Hab.</span>
+                        </div>
+                        <div class="indicator-card">
+                            <span class="ind-label">Nombre de Localités</span>
+                            <span class="ind-val" id="count-loc">--</span><span class="ind-unit">Villages</span>
+                        </div>
+                        <div class="indicator-card">
+                            <span class="ind-label">Taux de Scolarisation</span>
+                            <span class="ind-val">68.4</span><span class="ind-unit">%</span>
+                        </div>
+
+                        <div class="stat-group-title"><i class="fas fa-wheat-awn"></i> Économie & Agriculture</div>
+                        <div class="indicator-card">
+                            <span class="ind-label">Activité Principale</span>
+                            <span class="ind-val">Agriculture</span><span class="ind-unit">82% pop.</span>
+                        </div>
+                        <div class="indicator-card">
+                            <span class="ind-label">Production de Riz (Kolda)</span>
+                            <span class="ind-val">45 000</span><span class="ind-unit">Tonnes/an</span>
+                        </div>
+                        <div class="indicator-card">
+                            <span class="ind-label">Couverture Électricité (Rurale)</span>
+                            <span class="ind-val">32</span><span class="ind-unit">%</span>
+                        </div>
+
+                        <div class="alert alert-warning small mt-3" style="font-size: 0.7rem;">
+                            Sources : ANSD Sénégal / Gouvernance de Kolda (Données indicatives).
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet.photon.js"></script>
+        <script src="https://ppete2.github.io/Leaflet.PolylineMeasure/Leaflet.PolylineMeasure.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+        <script src="data/DEPARTEMENTS_4.js"></script>
+        <script src="data/REGIONS_5.js"></script>
+        <script src="data/ROUTES_6.js"></script>
+        <script src="data/HYDROGRAPHIE_7.js"></script>
+        <script src="data/ECOLES_8.js"></script>
+        <script src="data/LOCALITES_9.js"></script>
+
+        <script>
+            // Init Carte
+            var map = L.map('map', { zoomControl:true, maxZoom:21 }).fitBounds([[12.5115,-16.4933],[13.6894,-12.2145]]);
+            
+            var bases = {
+                osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map),
+                sat: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}'),
+                ter: L.tileLayer('https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}')
+            };
+            function upBase(v){ for(var b in bases) map.removeLayer(bases[b]); bases[v].addTo(map); }
+
+            // Mesures & Recherche
+            L.control.polylineMeasure({position:'topleft', unit:'metres', showBearing:true}).addTo(map);
+            map.addControl(new L.Control.Photon({position:'topright', placeholder:'Rechercher une localité...'}));
+
+            // Popups & Styles
+            function pop(f,l){
+                var c = '<div class="table-responsive"><table class="table table-sm table-borderless m-0">';
+                for(var p in f.properties) c += `<tr><td class="text-muted small">${p}</td><td class="fw-bold small">${f.properties[p]}</td></tr>`;
+                l.bindPopup(c + '</table></div>');
+            }
+
+            var layers = {
+                reg: L.geoJson(json_REGIONS_5, {style:{color:'#c0392b', weight:4, fillOpacity:0.05}, onEachFeature:pop}).addTo(map),
+                dep: L.geoJson(json_DEPARTEMENTS_4, {style:{color:'#2c3e50', weight:2, dashArray:'10,10', fillOpacity:0}, onEachFeature:pop}).addTo(map),
+                loc: L.geoJson(json_LOCALITES_9, {pointToLayer: (f,lt)=>L.circleMarker(lt,{radius:4, fillColor:'#8e44ad', color:'#fff', weight:1, fillOpacity:1}), onEachFeature:pop}).addTo(map),
+                rou: L.geoJson(json_ROUTES_6, {style:{color:'#f39c12', weight:2.5}, onEachFeature:pop}).addTo(map),
+                hyd: L.geoJson(json_HYDROGRAPHIE_7, {style:{color:'#2980b9', weight:2}, onEachFeature:pop}).addTo(map),
+                eco: L.geoJson(json_ECOLES_8, {pointToLayer: (f,lt)=>L.circleMarker(lt,{radius:5, fillColor:'#27ae60', color:'#fff', weight:1, fillOpacity:1}), onEachFeature:pop}).addTo(map)
+            };
+
+            function upL(k){ var chk=document.getElementById('l-'+k); chk.checked ? map.addLayer(layers[k]) : map.removeLayer(layers[k]); }
+
+            // Stats dynamiques
+            document.getElementById('count-loc').innerText = json_LOCALITES_9.features.length;
+
+            // GPS
+            function geoLoc(){ map.locate({setView:true, maxZoom:15}); }
+            map.on('locationfound', (e)=>L.marker(e.latlng).addTo(map).bindPopup("<b>Ma Position Actuelle</b>").openPopup());
+        </script>
+    </body>
+</html>
